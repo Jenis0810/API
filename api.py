@@ -24,13 +24,13 @@ def ask():
     docs = str(docs)
 
     # Define the chatbot's initial system message
-    system = [{"role": "system", "content": "You are chatbot who only answer from " + docs + " Do not make the answer longer than it needs to be."}]
+    system = [{"role": "system", "content": "You are chatbot who only answer from " + docs }]
 
     chat = []
     user = [{"role": "user", "content": user_prompt}]
     response = openai.ChatCompletion.create(
         messages=system + chat[-20:] + user,
-        model="gpt-4", top_p=0.5, stream=True
+        model="gpt-4-turbo", top_p=0.5, stream=True
     )
 
     reply = ""

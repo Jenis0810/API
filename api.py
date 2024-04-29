@@ -30,7 +30,7 @@ def ask():
     user = [{"role": "user", "content": user_prompt}]
     response = openai.ChatCompletion.create(
         messages=system + chat[-20:] + user,
-        model="gpt-4-turbo", top_p=0.5, stream=True
+        model="gpt-4", top_p=0.5, stream=True
     )
 
     reply = ""

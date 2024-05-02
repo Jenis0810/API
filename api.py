@@ -24,7 +24,7 @@ def ask():
     docs = str(docs)
 
     # Define the chatbot's initial system message
-    system = [{"role": "system", "content": "You are chatbot who only answer from " + docs }]
+    system = [{"role": "system", "content": "Put yourself in the role of a Blum Novotest GmbH Customer Service representative. Your responsibility is to assist individuals with inquiries pertaining to Blum Novotest GmbH's products. Your answers should be concise, accurate, and based solely on this information provided." + docs+ "Avoid providing unnecessary details and refrain from fabricating information. Stay focused on addressing the specific question at hand." }]
 
     chat = []
     user = [{"role": "user", "content": user_prompt}]

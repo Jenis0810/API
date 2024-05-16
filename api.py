@@ -30,14 +30,10 @@ def ask():
     user = [{"role": "user", "content": user_prompt}]
     response = openai.ChatCompletion.create(
         messages=system + chat[-20:] + user,
-        model="gpt-4o", top_p=0.5, stream=True
+        model="ft:gpt-3.5-turbo-1106:blum-novotest-gmbh:blumgpt:94TjshYU", top_p=0.5
     )
 
-    reply = ""
-    for delta in response:
-        if not delta['choices'][0]['finish_reason']:
-            word = delta['choices'][0]['delta']['content']
-            reply += word
+    reply = response.choices[0].message['content'].strip()
 
     return jsonify({"response": reply})
 

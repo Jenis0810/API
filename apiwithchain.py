@@ -3,6 +3,8 @@ import openai
 import pickle
 from flask_session import Session
 import uuid
+from pymongo import MongoClient
+# import datetime
 
 app = Flask(__name__)
 
@@ -15,10 +17,14 @@ app.config["SESSION_TYPE"] = "filesystem"
 app.secret_key = 'supersecretkey'
 Session(app)
 
+# Initialize MongoDB connection
+client = MongoClient("mongodb+srv://jenis:jenis0810@faq.q9ok1cm.mongodb.net/faq")
+db = client.faq
+ai_collection = db.ai
+
 with open('embeddings/merged.pkl', 'rb') as f:
     # Load the embedding
     embedding = pickle.load(f)
-
 
 @app.route('/ask', methods=['POST'])
 def ask():
@@ -31,18 +37,19 @@ def ask():
     session_id = request.json['Session-ID']
 
     if session_id:
-        # Load existing session
-        session.sid = session_id
-        if 'conversation' not in session:
-            session['conversation'] = []
+        # Load existing session from MongoDB
+        conversation = list(ai_collection.find({"session_id": session_id}))
+        if not conversation:
+            # If the session ID is not found, create a new session
+            session_id = str(uuid.uuid4())
+            conversation = []
     else:
         # Create a new session
         session_id = str(uuid.uuid4())
-        session.sid = session_id
-        session['conversation'] = []
+        conversation = []
 
     # Concatenate all previous user prompts with the current prompt
-    all_user_prompts = " ".join([msg['content'] for msg in session['conversation'] if msg['role'] == 'user']) + " " + user_prompt
+    all_user_prompts = " ".join([msg['prompt'] for msg in conversation if msg['prompt']]) + " " + user_prompt
 
     # Perform similarity search using the concatenated user prompts
     docs = embedding.similarity_search(all_user_prompts)
@@ -59,20 +66,36 @@ def ask():
         )
     }]
 
-    # Add the user's message to the conversation history
-    session['conversation'].append({"role": "user", "content": user_prompt})
-
     # Get the response from OpenAI API using the conversation history
     response = openai.ChatCompletion.create(
         model="gpt-4o",
-        messages=system + session['conversation'][-20:],  # Include the last 20 messages in the conversation
+        messages=system + [{"role": "user", "content": msg['prompt']} for msg in conversation[-20:]],  # Include the last 20 messages in the conversation
         top_p=0.5
     )
 
     reply = response.choices[0].message['content'].strip()
 
-    # Add the chatbot's reply to the conversation history
-    session['conversation'].append({"role": "assistant", "content": reply})
+    # # Get the current timestamp
+    # timestamp = datetime.datetime.now()
+
+    record = {
+            "session_id": session_id,
+            "prompt": user_prompt,
+            "response": reply
+        }
+
+        # Add the chatbot's reply to the conversation history and save it to MongoDB
+    ai_collection.update_one(
+        {"session_id": session_id},
+        {
+            "$set": record,
+            "$currentDate": {"timestamp": True}
+        },
+        upsert=True
+    )
+
+    # Add the chatbot's reply to the conversation history and save it to MongoDB
+    ai_collection.insert_one(record)
 
     return jsonify({"response": reply, "session_id": session_id})
 
